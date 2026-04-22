@@ -51,13 +51,13 @@ void Calculate(std::vector<Matrix *> keys, std::vector<Matrix *> values,
       gpu_sim.MatMul(row_soft, v_stack, row_out); // (1,512)
 
       if (r == 0) {
-        output = matrix_memory_allocator.Allocate("output_init");
-        gpu_sim.Copy(row_out, output, Position::kInSharedMemory);
+        output = row_out;
       } else {
         Matrix *new_output = matrix_memory_allocator.Allocate("output_cat");
         gpu_sim.Concat(output, row_out, new_output, /*axis=*/0,
                        Position::kInSharedMemory);
         gpu_sim.ReleaseMatrix(output);
+        gpu_sim.ReleaseMatrix(row_out);
         output = new_output;
       }
       gpu_sim.ReleaseMatrix(q_row);
@@ -65,7 +65,6 @@ void Calculate(std::vector<Matrix *> keys, std::vector<Matrix *> values,
       gpu_sim.ReleaseMatrix(row_exp);
       gpu_sim.ReleaseMatrix(row_sum);
       gpu_sim.ReleaseMatrix(row_soft);
-      gpu_sim.ReleaseMatrix(row_out);
     }
 
     gpu_sim.ReleaseMatrix(k_stack);
