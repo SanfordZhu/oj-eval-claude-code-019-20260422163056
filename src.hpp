@@ -9,6 +9,9 @@ void Calculate(std::vector<Matrix *> keys, std::vector<Matrix *> values,
   for (size_t i = 0; i < keys.size(); ++i) {
     Matrix *current_query = rater.GetNextQuery();
 
+    // Start moving Q to SRAM early to overlap with HBM concats
+    gpu_sim.MoveMatrixToSharedMem(current_query);
+
     // Build K_stack (0..i) and V_stack (0..i) in HBM
     Matrix *k_stack = matrix_memory_allocator.Allocate("k_stack_base");
     gpu_sim.Copy(keys[0], k_stack, Position::kInGpuHbm);
@@ -25,8 +28,7 @@ void Calculate(std::vector<Matrix *> keys, std::vector<Matrix *> values,
       v_stack = v_next;
     }
 
-    // Move operands for compute to SRAM and transpose K to K^T
-    gpu_sim.MoveMatrixToSharedMem(current_query);
+    // Move stacks for compute to SRAM and transpose K to K^T
     gpu_sim.MoveMatrixToSharedMem(k_stack);
     gpu_sim.MoveMatrixToSharedMem(v_stack);
     gpu_sim.Transpose(k_stack, Position::kInSharedMemory);
